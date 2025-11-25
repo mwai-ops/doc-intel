@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDF Content Extractor</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --secondary: #8b5cf6;
+            --background: #0f172a;
+            --surface: #1e293b;
+            --surface-light: #334155;
+            --text: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --success: #10b981;
+            --error: #ef4444;
+            --border: #475569;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: linear-gradient(135deg, var(--background) 0%, #1e293b 100%);
+            min-height: 100vh;
+            color: var(--text);
+            padding: 2rem;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 0.5rem;
+        }
+
+        .header p {
+            color: var(--text-secondary);
+            font-size: 1.1rem;
+        }
+
+        .upload-section {
+            background: var(--surface);
+            border-radius: 1rem;
+            padding: 2.5rem;
+            margin-bottom: 2rem;
+            border: 1px solid var(--border);
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+        }
+
+        .drop-zone {
+            border: 2px dashed var(--border);
+            border-radius: 0.75rem;
+            padding: 3rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: var(--background);
+        }
+
+        .drop-zone:hover,
+        .drop-zone.dragover {
+            border-color: var(--primary);
+            background: rgba(99, 102, 241, 0.05);
+        }
+
+        .drop-zone-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            opacity: 0.6;
+        }
+
+        .drop-zone-text {
+            font-size: 1.1rem;
+            color: var(--text-secondary);
+            margin-bottom: 0.5rem;
+        }
+
+        .file-info {
+            display: none;
+            margin-top: 1rem;
+            padding: 1rem;
+            background: var(--surface-light);
+            border-radius: 0.5rem;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .file-info.active {
+            display: flex;
+        }
+
+        .file-icon {
+            font-size: 2rem;
+        }
+
+        .file-details {
+            flex: 1;
+        }
+
+        .file-name {
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+        }
+
+        .file-size {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+        }
+
+        .format-selection {
+            margin-top: 2rem;
+        }
+
+        .format-selection h3 {
+            margin-bottom: 1rem;
+            color: var(--text);
+        }
+
+        .format-options {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .format-option {
+            position: relative;
+        }
+
+        .format-option input {
+            position: absolute;
+            opacity: 0;
+        }
+
+        .format-option label {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.75rem 1.5rem;
+            background: var(--background);
+            border: 2px solid var(--border);
+            border-radius: 0.5rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 500;
+        }
+
+        .format-option input:checked+label {
+            background: var(--primary);
+            border-color: var(--primary);
+            color: white;
+        }
+
+        .format-option label:hover {
+            border-color: var(--primary);
+        }
+
+        .extract-btn {
+            width: 100%;
+            margin-top: 2rem;
+            padding: 1rem 2rem;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            border: none;
+            border-radius: 0.75rem;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(99, 102, 241, 0.4);
+        }
+
+        .extract-btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(99, 102, 241, 0.6);
+        }
+
+        .extract-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .results-section {
+            display: none;
+        }
+
+        .results-section.active {
+            display: block;
+        }
+
+        .result-card {
+            background: var(--surface);
+            border-radius: 1rem;
+            padding: 2rem;
+            margin-bottom: 1.5rem;
+            border: 1px solid var(--border);
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+        }
+
+        .result-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .result-title {
+            font-size: 1.3rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .copy-btn {
+            padding: 0.5rem 1.5rem;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .copy-btn:hover {
+            background: var(--primary-dark);
+        }
+
+        .copy-btn.copied {
+            background: var(--success);
+        }
+
+        .result-content {
+            background: var(--background);
+            border-radius: 0.5rem;
+            padding: 1.5rem;
+            max-height: 400px;
+            overflow-y: auto;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 0.9rem;
+            line-height: 1.6;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+
+        .result-content::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .result-content::-webkit-scrollbar-track {
+            background: var(--surface-light);
+            border-radius: 4px;
+        }
+
+        .result-content::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 4px;
+        }
+
+        .result-content::-webkit-scrollbar-thumb:hover {
+            background: var(--primary);
+        }
+
+        .loading {
+            text-align: center;
+            padding: 3rem;
+            display: none;
+        }
+
+        .loading.active {
+            display: block;
+        }
+
+        .progress-container {
+            max-width: 500px;
+            margin: 2rem auto 0;
+        }
+
+        .progress-bar-wrapper {
+            background: var(--surface-light);
+            border-radius: 1rem;
+            height: 30px;
+            overflow: hidden;
+            position: relative;
+            margin-bottom: 1rem;
+        }
+
+        .progress-bar {
+            background: linear-gradient(90deg, var(--primary), var(--secondary));
+            height: 100%;
+            width: 0%;
+            transition: width 0.5s ease;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            padding-right: 1rem;
+            font-weight: 600;
+            font-size: 0.85rem;
+        }
+
+        .progress-info {
+            text-align: center;
+            color: var(--text-secondary);
+            font-size: 1rem;
+            margin-top: 0.5rem;
+        }
+
+        .spinner {
+            border: 4px solid var(--surface-light);
+            border-top: 4px solid var(--primary);
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 1rem;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        .error-message {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid var(--error);
+            color: var(--error);
+            padding: 1rem;
+            border-radius: 0.5rem;
+            margin-top: 1rem;
+            display: none;
+        }
+
+        .error-message.active {
+            display: block;
+        }
+
+        input[type="file"] {
+            display: none;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📄 PDF Content Extractor</h1>
+            <p>Extract text, markdown, and structured data from PDFs using AI</p>
+        </div>
+        <div class="upload-section" id="uploadSection">
+            <div class="drop-zone" id="dropZone">
+                <div class="drop-zone-icon">📎</div>
+                <div class="drop-zone-text">Drag & drop your PDF here or click to browse</div>
+                <input type="file" id="fileInput" accept=".pdf">
+            </div>
+            <div class="file-info" id="fileInfo">
+                <div class="file-icon">📄</div>
+                <div class="file-details">
+                    <div class="file-name" id="fileName"></div>
+                    <div class="file-size" id="fileSize"></div>
+                </div>
+            </div>
+            <div class="format-selection">
+                <h3>Select Output Formats</h3>
+                <div class="format-options">
+                    <div class="format-option">
+                        <input type="checkbox" id="formatText" name="format" value="text">
+                        <label for="formatText">📝 Plain Text</label>
+                    </div>
+                    <div class="format-option">
+                        <input type="checkbox" id="formatMarkdown" name="format" value="markdown" checked>
+                        <label for="formatMarkdown">📋 Markdown</label>
+                    </div>
+                    <div class="format-option">
+                        <input type="checkbox" id="formatJson" name="format" value="json">
+                        <label for="formatJson">🔧 JSON</label>
+                    </div>
+                </div>
+            </div>
+            <button class="extract-btn" id="extractBtn" disabled>Extract Content</button>
+            <div class="error-message" id="errorMessage"></div>
+        </div>
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p id="loadingStatus">Extracting content from your PDF...</p>
+            <div class="progress-container">
+                <div class="progress-bar-wrapper">
+                    <div class="progress-bar" id="progressBar">
+                        <span id="progressPercent">0%</span>
+                    </div>
+                </div>
+                <div class="progress-info">
+                    <span id="progressStatus">Initializing...</span>
+                </div>
+            </div>
+        </div>
+        <div class="results-section" id="resultsSection">
+            <div id="resultsContainer"></div>
+        </div>
+    </div>
+    <script>
+        const dropZone = document.getElementById('dropZone');
+        const fileInput = document.getElementById('fileInput');
+        const fileInfo = document.getElementById('fileInfo');
+        const fileName = document.getElementById('fileName');
+        const fileSize = document.getElementById('fileSize');
+        const extractBtn = document.getElementById('extractBtn');
+        const loading = document.getElementById('loading');
+        const resultsSection = document.getElementById('resultsSection');
+        const resultsContainer = document.getElementById('resultsContainer');
+        const errorMessage = document.getElementById('errorMessage');
+        const uploadSection = document.getElementById('uploadSection');
+        const header = document.querySelector('.header');
+        let selectedFile = null;
+        dropZone.addEventListener('click', () => fileInput.click());
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('dragover');
+        });
+        dropZone.addEventListener('dragleave', () => {
+            dropZone.classList.remove('dragover');
+        });
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('dragover');
+            const files = e.dataTransfer.files;
+            if (files.length > 0) handleFile(files[0]);
+        });
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) handleFile(e.target.files[0]);
+        });
+        function handleFile(file) {
+            if (!file.name.toLowerCase().endsWith('.pdf')) {
+                showError('Please select a PDF file');
+                return;
+            }
+            selectedFile = file;
+            fileName.textContent = file.name;
+            fileSize.textContent = formatFileSize(file.size);
+            fileInfo.classList.add('active');
+            extractBtn.disabled = false;
+            errorMessage.classList.remove('active');
+        }
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+        }
+        extractBtn.addEventListener('click', async () => {
+            const formats = Array.from(document.querySelectorAll('input[name="format"]:checked')).map(cb => cb.value);
+            if (formats.length === 0) { showError('Please select at least one output format'); return; }
+            if (!selectedFile) { showError('Please select a PDF file'); return; }
+            const sessionId = 'session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+            const formData = new FormData();
+            formData.append('pdf_file', selectedFile);
+            formData.append('session_id', sessionId);
+            formats.forEach(format => formData.append('formats[]', format));
+            uploadSection.style.display = 'none';
+            header.style.display = 'none';
+            loading.classList.add('active');
+            resultsSection.classList.remove('active');
+            errorMessage.classList.remove('active');
+            extractBtn.disabled = true;
+            updateProgressUI(0, 'Initializing...');
+            const eventSource = new EventSource(`/progress/${sessionId}`);
+            eventSource.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                updateProgressUI(data.progress, data.status);
+                if (data.progress >= 100) eventSource.close();
+            };
+            eventSource.onerror = () => eventSource.close();
+            try {
+                const response = await fetch('/extract', { method: 'POST', body: formData });
+                const data = await response.json();
+                if (!response.ok) throw new Error(data.error || 'Extraction failed');
+                displayResults(data.results);
+            } catch (error) { showError(error.message); eventSource.close(); }
+            finally {
+                uploadSection.style.display = '';
+                header.style.display = '';
+                loading.classList.remove('active');
+                extractBtn.disabled = false;
+            }
+        });
+        function updateProgressUI(progress, status) {
+            document.getElementById('progressBar').style.width = progress + '%';
+            document.getElementById('progressPercent').textContent = Math.round(progress) + '%';
+            document.getElementById('progressStatus').textContent = status;
+        }
+        function displayResults(results) {
+            resultsContainer.innerHTML = '';
+            const formatNames = { text: 'Plain Text', markdown: 'Markdown', json: 'JSON' };
+            const formatIcons = { text: '📝', markdown: '📋', json: '🔧' };
+            Object.entries(results).forEach(([format, content]) => {
+                const card = document.createElement('div');
+                card.className = 'result-card';
+                const displayContent = format === 'json' ? JSON.stringify(content, null, 2) : content;
+                card.innerHTML = `
+                    <div class="result-header">
+                        <div class="result-title">${formatIcons[format]} ${formatNames[format]}</div>
+                        <button class="copy-btn" onclick="copyToClipboard('${format}', this)">📋 Copy</button>
+                    </div>
+                    <div class="result-content" id="content-${format}">${escapeHtml(displayContent)}</div>
+                `;
+                resultsContainer.appendChild(card);
+            });
+            resultsSection.classList.add('active');
+        }
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+        async function copyToClipboard(format, btn) {
+            const content = document.getElementById(`content-${format}`).textContent;
+            try {
+                await navigator.clipboard.writeText(content);
+                const originalText = btn.innerHTML;
+                btn.innerHTML = '✓ Copied!';
+                btn.classList.add('copied');
+                setTimeout(() => {
+                    btn.innerHTML = originalText;
+                    btn.classList.remove('copied');
+                }, 2000);
+            } catch (error) { showError('Failed to copy to clipboard'); }
+        }
+        function showError(message) {
+            errorMessage.textContent = message;
+            errorMessage.classList.add('active');
+        }
+    </script>
+</body>
+
+</html>
