@@ -6,6 +6,7 @@ This script extracts text content from PDF files using Azure's Document Intellig
 
 import os
 import sys
+import json
 import argparse
 from pathlib import Path
 from typing import Optional
@@ -361,7 +362,6 @@ Examples:
             
             # Optionally save structured data
             if args.output:
-                import json
                 with open(args.output, "w", encoding="utf-8") as f:
                     json.dump(data, f, indent=2, ensure_ascii=False)
                 print(f"\n✅ Structured data saved to: {args.output}")

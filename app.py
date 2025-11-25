@@ -77,17 +77,20 @@ def estimate_time_remaining(start_time, current_progress):
     return max(1, int(remaining))  # Never show 0 seconds
 
 
-def extract_plain_text(pdf_path: str, session_id: str = None, start_time: float = None) -> str:
-    """Extract plain text from PDF"""
+def analyze_document(pdf_path: str, session_id: str = None, start_time: float = None):
+    """Analyze document using Azure Document Intelligence"""
+    def report_progress(progress, status, time_remaining=None):
+        if session_id:
+            update_progress(session_id, progress, status, time_remaining)
+
     if session_id:
-        update_progress(session_id, 0, "Starting...", None)
-        time.sleep(0.3)
-        update_progress(session_id, 5, "Preparing document...", None)
-        time.sleep(0.5)
+        report_progress(0, "Starting...", None)
+        report_progress(5, "Preparing document...", None)
+
     
     with open(pdf_path, "rb") as f:
         if session_id:
-            update_progress(session_id, 10, "Uploading to Azure AI...", None)
+            report_progress(10, "Uploading to Azure AI...", None)
         poller = client.begin_analyze_document("prebuilt-document", document=f)
     
     # Simulate realistic progress during Azure processing
@@ -98,32 +101,40 @@ def extract_plain_text(pdf_path: str, session_id: str = None, start_time: float 
         while not poller.done():
             # Update progress every 0.5 seconds
             if time.time() - last_update >= 0.5:
-                # Slow down as we approach 60%
+                # Slow down as we approach 90% (leaving 10% for formatting)
                 if progress < 40:
                     increment = 3
-                elif progress < 55:
+                elif progress < 60:
                     increment = 2
                 else:
                     increment = 1
                 
-                progress = min(progress + increment, 60)
+                progress = min(progress + increment, 90)
                 time_remaining = estimate_time_remaining(start_time, progress) if start_time else None
-                update_progress(session_id, progress, "Analyzing document with AI...", time_remaining)
+                report_progress(progress, "Analyzing document with AI...", time_remaining)
                 last_update = time.time()
             
-            time.sleep(0.2)  # Check status frequently
+            time.sleep(0.1)  # Check status frequently
+
         
-        # Ensure we reach at least 60% before continuing
-        if progress < 60:
-            progress = 60
+        # Ensure we reach at least 90% before continuing
+        if progress < 90:
+            progress = 90
             time_remaining = estimate_time_remaining(start_time, progress) if start_time else None
-            update_progress(session_id, progress, "Analysis complete...", time_remaining)
+            report_progress(progress, "Analysis complete...", time_remaining)
     
-    result = poller.result()
+    return poller.result()
+
+
+def format_plain_text(result, session_id: str = None, start_time: float = None, base_progress: int = 0, max_progress: int = 100) -> str:
+    """Format extracted content as plain text"""
+    def report_progress(local_progress, status, time_remaining=None):
+        if session_id:
+            actual_progress = base_progress + int(local_progress * (max_progress / 100))
+            update_progress(session_id, actual_progress, status, time_remaining)
     
     if session_id:
-        time_remaining = estimate_time_remaining(start_time, 65) if start_time else None
-        update_progress(session_id, 65, "Extracting text content...", time_remaining)
+        report_progress(0, "Extracting text content...", None)
     
     extracted_text = []
     total_pages = len(result.pages)
@@ -133,58 +144,22 @@ def extract_plain_text(pdf_path: str, session_id: str = None, start_time: float 
             extracted_text.append(line.content)
         
         if session_id and total_pages > 0:
-            page_progress = 70 + int((idx + 1) / total_pages * 25)
-            time_remaining = estimate_time_remaining(start_time, page_progress) if start_time else None
-            update_progress(session_id, page_progress, f"Extracting page {idx + 1}/{total_pages}...", time_remaining)
-            time.sleep(0.1)  # Small delay to show progress per page
+            page_progress = int((idx + 1) / total_pages * 100)
+            time_remaining = estimate_time_remaining(start_time, base_progress + int(page_progress * (max_progress / 100))) if start_time else None
+            report_progress(page_progress, f"Extracting page {idx + 1}/{total_pages}...", time_remaining)
     
     return "\n".join(extracted_text)
 
 
-def extract_structured_json(pdf_path: str, session_id: str = None, start_time: float = None) -> dict:
-    """Extract structured data as JSON"""
-    if session_id:
-        update_progress(session_id, 0, "Starting...", None)
-        time.sleep(0.3)
-        update_progress(session_id, 5, "Preparing document...", None)
-        time.sleep(0.5)
-    
-    with open(pdf_path, "rb") as f:
+def format_structured_json(result, session_id: str = None, start_time: float = None, base_progress: int = 0, max_progress: int = 100) -> dict:
+    """Format structured data as JSON"""
+    def report_progress(local_progress, status, time_remaining=None):
         if session_id:
-            update_progress(session_id, 10, "Uploading to Azure AI...", None)
-        poller = client.begin_analyze_document("prebuilt-document", document=f)
-    
-    # Realistic progress during Azure processing
+            actual_progress = base_progress + int(local_progress * (max_progress / 100))
+            update_progress(session_id, actual_progress, status, time_remaining)
+
     if session_id:
-        progress = 15
-        last_update = time.time()
-        
-        while not poller.done():
-            if time.time() - last_update >= 0.5:
-                if progress < 40:
-                    increment = 3
-                elif progress < 55:
-                    increment = 2
-                else:
-                    increment = 1
-                
-                progress = min(progress + increment, 60)
-                time_remaining = estimate_time_remaining(start_time, progress) if start_time else None
-                update_progress(session_id, progress, "Analyzing document structure...", time_remaining)
-                last_update = time.time()
-            
-            time.sleep(0.2)
-        
-        if progress < 60:
-            progress = 60
-            time_remaining = estimate_time_remaining(start_time, progress) if start_time else None
-            update_progress(session_id, progress, "Analysis complete...", time_remaining)
-    
-    result = poller.result()
-    
-    if session_id:
-        time_remaining = estimate_time_remaining(start_time, 50) if start_time else None
-        update_progress(session_id, 50, "Extracting structured data...", time_remaining)
+        report_progress(0, "Extracting structured data...", None)
     
     structured_data = {
         "pages": len(result.pages),
@@ -196,7 +171,7 @@ def extract_structured_json(pdf_path: str, session_id: str = None, start_time: f
     # Extract tables
     if result.tables:
         if session_id:
-            update_progress(session_id, 60, "Extracting tables...")
+            report_progress(30, "Extracting tables...")
         for table in result.tables:
             table_data = {
                 "row_count": table.row_count,
@@ -214,7 +189,7 @@ def extract_structured_json(pdf_path: str, session_id: str = None, start_time: f
     # Extract key-value pairs
     if result.key_value_pairs:
         if session_id:
-            update_progress(session_id, 75, "Extracting key-value pairs...")
+            report_progress(60, "Extracting key-value pairs...")
         for kv_pair in result.key_value_pairs:
             if kv_pair.key and kv_pair.value:
                 structured_data["key_value_pairs"].append({
@@ -225,7 +200,7 @@ def extract_structured_json(pdf_path: str, session_id: str = None, start_time: f
     # Extract paragraphs
     if result.paragraphs:
         if session_id:
-            update_progress(session_id, 85, "Extracting paragraphs...")
+            report_progress(80, "Extracting paragraphs...")
         for para in result.paragraphs:
             structured_data["paragraphs"].append(para.content)
     
@@ -255,46 +230,16 @@ def format_table_as_markdown(table) -> str:
     return "\n".join(markdown_lines)
 
 
-def extract_markdown(pdf_path: str, session_id: str = None, start_time: float = None) -> str:
-    """Extract content and format as markdown"""
-    if session_id:
-        update_progress(session_id, 0, "Starting...", None)
-        time.sleep(0.3)
-        update_progress(session_id, 5, "Preparing document...", None)
-        time.sleep(0.5)
-    
-    with open(pdf_path, "rb") as f:
+def format_markdown(result, pdf_path: str, session_id: str = None, start_time: float = None, base_progress: int = 0, max_progress: int = 100) -> str:
+    """Format content as markdown"""
+    def report_progress(local_progress, status, time_remaining=None):
         if session_id:
-            update_progress(session_id, 10, "Uploading to Azure AI...", None)
-        poller = client.begin_analyze_document("prebuilt-document", document=f)
-    
-    # Realistic progress during Azure processing
+            actual_progress = base_progress + int(local_progress * (max_progress / 100))
+            update_progress(session_id, actual_progress, status, time_remaining)
+
     if session_id:
-        progress = 15
-        last_update = time.time()
-        
-        while not poller.done():
-            if time.time() - last_update >= 0.5:
-                if progress < 35:
-                    increment = 3
-                elif progress < 45:
-                    increment = 2
-                else:
-                    increment = 1
-                
-                progress = min(progress + increment, 50)
-                time_remaining = estimate_time_remaining(start_time, progress) if start_time else None
-                update_progress(session_id, progress, "Analyzing document...", time_remaining)
-                last_update = time.time()
-            
-            time.sleep(0.2)
-        
-        if progress < 50:
-            progress = 50
-            time_remaining = estimate_time_remaining(start_time, progress) if start_time else None
-            update_progress(session_id, progress, "Analysis complete...", time_remaining)
+        report_progress(0, "Formatting markdown...", None)
     
-    result = poller.result()
     markdown_content = []
     
     # Add document header
@@ -303,9 +248,6 @@ def extract_markdown(pdf_path: str, session_id: str = None, start_time: float = 
     markdown_content.append(f"*Extracted from PDF using Microsoft Document Intelligence*\n")
     markdown_content.append(f"*Total Pages: {len(result.pages)}*\n")
     markdown_content.append("---\n")
-    
-    if session_id:
-        update_progress(session_id, 50, "Formatting markdown...")
     
     # Process each page
     total_pages = len(result.pages)
@@ -327,15 +269,14 @@ def extract_markdown(pdf_path: str, session_id: str = None, start_time: float = 
         markdown_content.append("\n")
         
         if session_id and total_pages > 0:
-            page_progress = 55 + int((page_num / total_pages) * 25)
-            time_remaining = estimate_time_remaining(start_time, page_progress) if start_time else None
-            update_progress(session_id, page_progress, f"Formatting page {page_num}/{total_pages}...", time_remaining)
-            time.sleep(0.1)
+            page_progress = int((page_num / total_pages) * 60)
+            time_remaining = estimate_time_remaining(start_time, base_progress + int(page_progress * (max_progress / 100))) if start_time else None
+            report_progress(page_progress, f"Formatting page {page_num}/{total_pages}...", time_remaining)
     
     # Add tables section
     if result.tables:
         if session_id:
-            update_progress(session_id, 85, "Formatting tables...")
+            report_progress(80, "Formatting tables...")
         markdown_content.append("\n---\n")
         markdown_content.append("\n## Tables\n")
         
@@ -347,7 +288,7 @@ def extract_markdown(pdf_path: str, session_id: str = None, start_time: float = 
     # Add key-value pairs section
     if result.key_value_pairs:
         if session_id:
-            update_progress(session_id, 92, "Extracting fields...")
+            report_progress(95, "Extracting fields...")
         markdown_content.append("\n---\n")
         markdown_content.append("\n## Extracted Fields\n")
         
@@ -420,28 +361,35 @@ def extract():
         
         # Initialize progress
         if session_id:
-            update_progress(session_id, 5, "Starting extraction...")
+            update_progress(session_id, 0, "Starting extraction...")
+        
+        # Analyze document once
+        result = analyze_document(filepath, session_id, start_time)
         
         # Extract content in requested formats
         results = {}
         format_count = len(formats)
         
+        # Formatting phase takes the remaining 10% of progress
+        formatting_base = 90
+        formatting_total = 10
+        
         for idx, fmt in enumerate(formats):
-            base_progress = int((idx / format_count) * 95)
+            # Calculate progress range for this format
+            segment_size = formatting_total / format_count
+            base_progress = formatting_base + int(idx * segment_size)
+            max_progress = int(segment_size)
             
             if fmt == 'text':
-                results['text'] = extract_plain_text(filepath, session_id, start_time)
+                results['text'] = format_plain_text(result, session_id, start_time, base_progress, max_progress)
             elif fmt == 'markdown':
-                results['markdown'] = extract_markdown(filepath, session_id, start_time)
+                results['markdown'] = format_markdown(result, filepath, session_id, start_time, base_progress, max_progress)
             elif fmt == 'json':
-                results['json'] = extract_structured_json(filepath, session_id, start_time)
+                results['json'] = format_structured_json(result, session_id, start_time, base_progress, max_progress)
         
         # Complete
         if session_id:
             update_progress(session_id, 100, "Complete!")
-        
-        # Clean up uploaded file
-        os.remove(filepath)
         
         return jsonify({
             'success': True,
@@ -451,6 +399,14 @@ def extract():
     
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+        
+    finally:
+        # Clean up uploaded file
+        if os.path.exists(filepath):
+            try:
+                os.remove(filepath)
+            except Exception:
+                pass  # Ignore error during cleanup
 
 
 if __name__ == '__main__':
