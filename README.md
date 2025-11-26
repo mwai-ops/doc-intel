@@ -1,6 +1,6 @@
 # PDF Content Extractor using Microsoft Document Intelligence
 
-A Python CLI tool to extract text and structured data from PDF files using Azure's Document Intelligence service (formerly Form Recognizer).
+A powerful Web Application to extract text and structured data from PDF files using Azure's Document Intelligence service.
 
 ## Features
 
@@ -58,101 +58,18 @@ AZURE_DOCUMENT_INTELLIGENCE_KEY=your-api-key-here
 
 ## Usage
 
-### Web Interface
-
 1. Start the web server:
    ```bash
    python app.py
    ```
 2. Open your browser and navigate to `http://localhost:5000`
 3. **Drag & Drop** your PDF file into the upload zone
-4. Select your desired output formats (Text, Markdown, JSON)
+4. **Select Output Formats**:
+   - **Plain Text**: Extract raw text content.
+   - **Markdown**: Get formatted text with headers and tables.
+   - **JSON**: Get structured data including tables and key-value pairs.
 5. Click **Extract Content** and watch the real-time progress
 6. View results in the interactive viewer or copy them to your clipboard
-
-### Basic Text Extraction
-
-Extract text from a PDF and display it:
-
-```bash
-python extract_pdf.py path/to/your/document.pdf
-```
-
-### Save Extracted Text to File
-
-```bash
-python extract_pdf.py input.pdf -o output.txt
-```
-
-### Extract as Markdown Format
-
-Extract with proper markdown formatting including headings, tables, and structure:
-
-```bash
-python extract_pdf.py document.pdf --markdown -o output.md
-```
-
-This will create a markdown file with:
-- Document title and metadata  
-- Page-by-page content with headings
-- Tables formatted as markdown tables
-- Key-value pairs formatted as bullet lists
-
-### Extract Structured Data
-
-Extract tables, key-value pairs, and paragraphs:
-
-```bash
-python extract_pdf.py document.pdf --structured
-```
-
-### Save Structured Data as JSON
-
-```bash
-python extract_pdf.py document.pdf --structured -o output.json
-```
-
-## Command Line Options
-
-```
-positional arguments:
-  pdf_file              Path to the PDF file to process
-
-optional arguments:
-  -h, --help           Show help message and exit
-  -o, --output OUTPUT  Output file path for extracted text
-  --markdown           Format output as markdown (with headings, tables, and formatting)
-  --structured         Extract structured data (tables, key-value pairs)
-```
-
-## Example Output
-
-### Plain Text Extraction
-```
-📄 Processing PDF: sample.pdf
-⏳ Analyzing document...
-📑 Processing page 1 of 3
-📑 Processing page 2 of 3
-📑 Processing page 3 of 3
-✅ Extraction complete! Total pages: 3
-📊 Total characters extracted: 5432
-```
-
-### Structured Data Extraction
-```
-📄 Extracting structured data from: invoice.pdf
-📊 Found 2 table(s)
-🔑 Found 15 key-value pair(s)
-📝 Found 8 paragraph(s)
-
-==================================================
-STRUCTURED DATA SUMMARY
-==================================================
-Total Pages: 2
-Tables: 2
-Key-Value Pairs: 15
-Paragraphs: 8
-```
 
 ## Troubleshooting
 
@@ -182,6 +99,7 @@ If you see an error about missing environment variables, ensure:
 
 - `azure-ai-formrecognizer==3.3.3` - Azure Document Intelligence SDK
 - `python-dotenv==1.0.0` - Environment variable management
+- `Flask` - Web Framework
 
 ## License
 
