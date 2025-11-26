@@ -4,13 +4,14 @@ A Python CLI tool to extract text and structured data from PDF files using Azure
 
 ## Features
 
-- 📄 Extract plain text from PDF files
-- 🌐 **Web Interface** - User-friendly web UI for easy uploading and extraction
-- 📝 **Extract and format as Markdown** - Get beautifully formatted markdown with headings, tables, and proper structure
-- 📊 Extract structured data (tables, key-value pairs, paragraphs)
-- 💾 Save extracted content to files
-- 🔐 Secure credential management using `.env` files
-- 🎯 Simple command-line interface
+- 📄 **Smart PDF Extraction** - Extract plain text, structured data, and markdown from any PDF
+- 🌐 **Modern Web Interface** - Beautiful, dark-mode UI with drag & drop support
+- ⚡ **Real-time Progress** - Watch the extraction process with detailed step-by-step progress tracking
+- 📝 **Markdown Formatting** - Get perfect markdown output with headers, tables, and lists preserved
+- 📊 **Structured Data** - Extract tables and key-value pairs into JSON format
+- 👁️ **Interactive Viewer** - View results directly in the browser with one-click copy
+- 💾 **Multi-format Export** - Download results in Text, Markdown, or JSON formats
+- 🔐 **Secure** - API keys managed safely via environment variables
 
 ## Setup
 
@@ -64,8 +65,10 @@ AZURE_DOCUMENT_INTELLIGENCE_KEY=your-api-key-here
    python app.py
    ```
 2. Open your browser and navigate to `http://localhost:5000`
-3. Upload a PDF file and select your desired output formats (Text, Markdown, JSON)
-4. View the results directly in the browser or download the extracted files
+3. **Drag & Drop** your PDF file into the upload zone
+4. Select your desired output formats (Text, Markdown, JSON)
+5. Click **Extract Content** and watch the real-time progress
+6. View results in the interactive viewer or copy them to your clipboard
 
 ### Basic Text Extraction
 
